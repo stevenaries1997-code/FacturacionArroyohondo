@@ -4,125 +4,552 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema LICOEXPRESS - Control Total</title>
-    <!-- Librería externa para manejo de Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Enlace a la hoja de estilos separada -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root { --azul-oscuro: #002060; --negro-borde: #000; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; justify-content: center; }
+        .view { display: none; }
+        .view.active { display: flex; gap: 20px; }
+        .main-container { max-width: 1200px; background: #fff; padding: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        .factura-wrapper { flex: 3; position: relative; background: white; padding: 10px; }
+        
+        #bloqueo-seguridad {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            color: white; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+
+        .tabla-factura { border-collapse: collapse; width: 100%; margin-bottom: 2px; }
+        .tabla-factura input { width: 100%; border: none; padding: 4px; box-sizing: border-box; background: transparent; display: block; font-family: Arial; }
+        .label-cell { background-color: var(--azul-oscuro); color: #fff; font-weight: bold; width: 120px; text-align: center; border: 1px solid var(--negro-borde); font-size: 12px; }
+        .value-cell { border: 1px solid var(--negro-borde); text-align: center; }
+
+        .productos-table th { background-color: var(--azul-oscuro); color: #fff; font-size: 11px; border: 1px solid var(--negro-borde); padding: 8px; }
+        .productos-table td { border: 1px solid var(--negro-borde); height: 28px; position: relative; font-size: 12px; }
+
+        .seccion-totales { width: 100%; border-collapse: collapse; margin-top: -1px; }
+        .seccion-totales td { border: 1px solid var(--negro-borde); height: 25px; font-size: 12px; }
+        .label-total { background-color: var(--azul-oscuro); color: white; font-weight: bold; width: 150px; padding-left: 8px; text-transform: uppercase; }
+        .value-total { text-align: right; padding-right: 10px; font-weight: bold; width: 150px; }
+        .input-nota { width: 100%; border: none; text-align: right; font-weight: bold; color: #cc0000; padding-right: 10px; box-sizing: border-box; }
+
+        .sidebar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; min-width: 200px; }
+        .logo-placeholder { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #cc0000; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; text-align: center; color: #000; margin-bottom: 10px; }
+
+        .btn { width: 100%; border: none; color: white; font-weight: bold; padding: 12px; cursor: pointer; border-radius: 6px; transition: all 0.3s; font-size: 13px; }
+        .btn-guardar { background: linear-gradient(135deg, #000a30, #004e92); }
+        .btn-nuevo { background: linear-gradient(135deg, #00d2ff, #3a7bd5); }
+        .btn-db { background: #28a745; }
+        .btn-respaldo { background: #d35400; }
+
+        .sugerencias { position: absolute; background: white; border: 1px solid #002060; z-index: 9999; width: 100%; max-height: 200px; overflow-y: auto; display: none; top: 100%; left: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .sugerencia-item { padding: 10px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #eee; color: #333; }
+        .sugerencia-item:hover { background-color: #f0f0f0; color: #002060; font-weight: bold; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); overflow-y: auto; padding: 40px 0; }
+        .modal-content { background: white; margin: auto; padding: 20px; width: 850px; position: relative; }
+        .close-modal { position: absolute; right: 20px; top: 10px; font-size: 30px; cursor: pointer; color: red; }
+
+        @media print {
+            .sidebar, .btn, .sugerencias, .close-modal, .view:not(.active) { display: none !important; }
+            body { background: white; padding: 0; }
+            .main-container { box-shadow: none; border: none; width: 100%; }
+        }
+    </style>
 </head>
 <body onload="init()">
 
-    <!-- Bloqueo de Seguridad por Respaldo -->
     <div id="bloqueo-seguridad">
-        <h1 style="color: #ffc107;">⚠️ RESPALDO SEMANAL REQUERIDO ⚠️</h1>
-        <p style="font-size: 1.2em; max-width: 600px;">Para continuar facturando, debe descargar el archivo Excel con toda la información histórica.</p>
-        <button class="btn btn-respaldo" style="padding: 25px; width: 400px; font-size: 18px;" onclick="exportarTodoExcel()">📥 DESCARGAR TODA LA INFO Y DESBLOQUEAR</button>
+        <h1>SISTEMA BLOQUEADO</h1>
+        <p>Realice el respaldo semanal para continuar.</p>
+        <button class="btn btn-respaldo" onclick="exportarTodoExcel()" style="width: 300px;">DESCARGAR RESPALDO</button>
     </div>
 
-    <div id="vista-factura" class="view active main-container">
-        <div class="factura-wrapper" id="area-captura">
-            <table class="tabla-factura">
-                <tr><td class="label-cell">FACTURA</td><td class="value-cell" colspan="6"><input type="text" id="n-factura" value="CLAH-001" style="text-align:center; font-weight:bold;"></td></tr>
-                <tr><td class="label-cell">FECHA</td><td class="value-cell" colspan="6"><input type="text" id="fecha-input" style="text-align:center;"></td></tr>
-                <tr><td class="label-cell">CLIENTE</td><td class="value-cell" colspan="6"><input type="text" id="cliente-input" placeholder="NOMBRE DEL CLIENTE" style="text-align:center; font-weight:bold;"></td></tr>
-            </table>
-            <table class="tabla-factura productos-table">
-                <thead>
-                    <tr><th>CODIGO</th><th>DESCRIPCION</th><th>CANT. CAJAS</th><th>CANT. UNIDAD</th><th>PRECIO VENTA</th><th>UNITARIO</th><th>TOTAL</th></tr>
-                </thead>
-                <tbody id="body-factura"></tbody>
-            </table>
-            
-            <!-- Sección de totales tipo Excel -->
-            <table class="seccion-totales">
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">SUBTOTAL</td>
-                    <td class="value-total" id="subtotal-factura">$ 0</td>
-                </tr>
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">VALOR FACTURA</td>
-                    <td class="value-total" id="total-factura">$ 0</td>
-                </tr>
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">NOTA</td>
-                    <td class="value-total" style="padding:0;">
-                        <input type="text" id="nota-credito" class="input-nota" value="-$ 0" oninput="recalcularConNota()">
-                    </td>
-                </tr>
-            </table>
+    <div class="main-container">
+        <div id="vista-factura" class="view active">
+            <div class="factura-wrapper" id="area-captura">
+                <table class="tabla-factura">
+                    <tr>
+                        <td rowspan="3" colspan="2" style="text-align: center; border: 1px solid #000;"><h2 style="margin:0; color: #002060;">LICOEXPRESS</h2><p style="font-size: 10px; margin:0;">REMISIÓN DE VENTA</p></td>
+                        <td class="label-cell">FECHA</td>
+                        <td class="value-cell"><input type="text" id="fecha-input"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">FACTURA N°</td>
+                        <td class="value-cell"><input type="text" id="n-factura" value="CLAH-001"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">CLIENTE</td>
+                        <td class="value-cell"><input type="text" id="cliente-input" placeholder="Nombre del cliente"></td>
+                    </tr>
+                </table>
+
+                <table class="tabla-factura productos-table">
+                    <thead>
+                        <tr>
+                            <th>CÓDIGO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>CAJAS</th>
+                            <th>UDS</th>
+                            <th>PRECIO VENTA</th>
+                            <th>UNITARIO</th>
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-factura"></tbody>
+                </table>
+
+                <table class="seccion-totales">
+                    <tr>
+                        <td rowspan="3" style="width: 50%;"></td>
+                        <td class="label-total">SUBTOTAL</td>
+                        <td class="value-total" id="subtotal-factura">$ 0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-total" style="background-color: #cc0000;">NOTA CRÉDITO</td>
+                        <td class="value-total"><input type="text" id="nota-credito" class="input-nota" value="-$ 0" oninput="recalcularConNota()"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-total">VALOR FACTURA</td>
+                        <td class="value-total" id="total-factura" style="font-size: 18px; color: #002060;">$ 0</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="sidebar">
+                <div class="logo-placeholder">LICO<br>EXPRESS</div>
+                <button class="btn btn-guardar" onclick="guardarFacturaVisual()">💾 GUARDAR</button>
+                <button class="btn btn-nuevo" onclick="nuevaFactura()">📄 NUEVA</button>
+                <button class="btn btn-historial" style="background:#002060" onclick="cambiarVista('vista-historial')">📜 HISTORIAL</button>
+                <button class="btn btn-db" onclick="cambiarVista('vista-db')">📦 INVENTARIO</button>
+                <button class="btn btn-respaldo" onclick="exportarTodoExcel()">📥 RESPALDO</button>
+            </div>
         </div>
 
-        <div class="sidebar no-print">
-            <div class="logo-placeholder"><span>LICOEXPRESS</span></div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Facturación</div>
-                <button class="btn btn-guardar" onclick="guardarFacturaVisual()">GUARDAR FACTURA</button>
-                <button class="btn btn-nuevo" onclick="nuevaFactura()">NUEVA FACTURA</button>
+        <div id="vista-historial" class="view">
+            <div style="width:100%">
+                <button class="btn btn-nuevo" onclick="cambiarVista('vista-factura')" style="width:200px">⬅ VOLVER</button>
+                <table class="tabla-factura" style="margin-top:20px">
+                    <thead><tr class="label-cell"><th>ID</th><th>FECHA</th><th>CLIENTE</th><th>TOTAL</th><th>VER</th></tr></thead>
+                    <tbody id="lista-historial"></tbody>
+                </table>
             </div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Registros y Cierre</div>
-                <button class="btn btn-historial" onclick="cambiarVista('vista-historial')">HISTORIAL ACTUAL</button>
-                <button class="btn btn-db" style="background: #6c757d;" onclick="cambiarVista('vista-lista-cierres')">HISTORIAL CIERRES</button>
-            </div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Configuración</div>
-                <button class="btn btn-db" onclick="cambiarVista('vista-db')">BASE DE DATOS</button>
-                <button class="btn btn-respaldo" style="padding: 10px; font-size: 11px;" onclick="exportarTodoExcel()">📥 EXPORTAR TODO (EXCEL)</button>
+        </div>
+
+        <div id="vista-db" class="view">
+            <div style="width:100%">
+                <button class="btn btn-nuevo" onclick="cambiarVista('vista-factura')" style="width:150px">⬅ VOLVER</button>
+                <input type="file" id="import-file" style="display:none">
+                <button class="btn btn-db" onclick="document.getElementById('import-file').click()" style="width:150px; background: #002060;">📂 SUBIR EXCEL</button>
+                <button class="btn btn-db" onclick="aniadirItemManual()" style="width:150px">➕ AÑADIR ITEM</button>
+                
+                <table class="tabla-factura" style="margin-top:20px">
+                    <thead><tr class="label-cell"><th>CÓDIGO</th><th>NOMBRE</th><th>UNIDAD/CAJA</th></tr></thead>
+                    <tbody id="lista-db"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Modales y Vistas Secundarias -->
     <div id="modalFactura" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="cerrarModal()">&times;</span>
-            <div id="contenido-modal"></div>
-            <div style="margin-top:20px; text-align:center;" class="no-print">
-                <button class="btn btn-guardar" style="width:250px" onclick="window.print()">IMPRIMIR REMISIÓN (SIN PRECIOS)</button>
-            </div>
-        </div>
+        <span class="close-modal" onclick="cerrarModal()">&times;</span>
+        <div class="modal-content" id="contenido-modal"></div>
+        <div style="text-align: center; margin-top: 20px;"><button class="btn btn-guardar" onclick="window.print()" style="width: 200px;">IMPRIMIR</button></div>
     </div>
 
-    <div id="vista-historial" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>📋 Historial de Facturas (Día Actual)</h2>
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>Nº</th><th>FECHA</th><th>CLIENTE</th><th>TOTAL</th><th>VER</th></tr></thead>
-                <tbody id="lista-historial"></tbody>
-            </table>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-nuevo" style="width: auto; padding: 12px 25px;" onclick="cambiarVista('vista-factura')">VOLVER</button>
-                <button class="btn" style="width: auto; padding: 12px 25px; background: #c0392b; color: white;" onclick="ejecutarCierreDia()">CIERRE DE DÍA</button>
-            </div>
-        </div>
-    </div>
+    <script>
+        // BASE DE DATOS COMPLETA DESDE EL ARCHIVO
+        const bdInicial = [
+            {codigo:"50",nombre:"AGUA CRISTAL PET 600 ML",unidad:24},
+            {codigo:"2",nombre:"TORTA COMBINADA CHOCOLATE/VAINILLA",unidad:1},
+            {codigo:"12",nombre:"PASTEL X 16 UNIDADES",unidad:16},
+            {codigo:"282",nombre:"CIGARRILLO L&M SILVER MEDIA",unidad:1},
+            {codigo:"1343",nombre:"VUSE GO 5000 BANANA ICE 3%",unidad:1},
+            {codigo:"136",nombre:"AGUILA LIGHT BOTELLA 1000 ML",unidad:13},
+            {codigo:"495",nombre:"GASEOSA COLOMBIANA 1,5 LT",unidad:12},
+            {codigo:"508",nombre:"GASEOSA MANZANA 1,5 LT",unidad:12},
+            {codigo:"530",nombre:"GASEOSA PEPSI 1,5 LT",unidad:12},
+            {codigo:"336",nombre:"COCA COLA 1.5 LT ORIGINAL",unidad:12},
+            {codigo:"1877",nombre:"ITEM 102040",unidad:24},
+            {codigo:"392",nombre:"COSTEÑA BACANA BOTELLA 320 ML",unidad:30},
+            {codigo:"145",nombre:"AGUILA ORIGINAL BOTELLA 330 ML",unidad:30},
+            {codigo:"148",nombre:"AGUILA ORIGINAL LATA 330 ML",unidad:24},
+            {codigo:"384",nombre:"CORONA BOTELLA NO RETORNABLE 330 ML",unidad:24},
+            {codigo:"511",nombre:"GASEOSA MANZANA 2,5 LT",unidad:8},
+            {codigo:"512",nombre:"GASEOSA MANZANA 3.125 LT",unidad:6},
+            {codigo:"499",nombre:"GASEOSA COLOMBIANA 3.125 LT",unidad:6},
+            {codigo:"532",nombre:"GASEOSA PEPSI 2,5 LT",unidad:8},
+            {codigo:"47",nombre:"AGUA CRISTAL PET 1000 ML",unidad:12},
+            {codigo:"498",nombre:"GASEOSA COLOMBIANA 2,5 LT",unidad:8},
+            {codigo:"183",nombre:"BUDWEISER LATA 269 ML",unidad:24},
+            {codigo:"323",nombre:"CLUB COLOMBIA DORADA BOTELLA 330 ML",unidad:30},
+            {codigo:"325",nombre:"CLUB COLOMBIA DORADA LATA 330 ML",unidad:24},
+            {codigo:"390",nombre:"CORONITA EXTRA BOTELLA NR 210 ML",unidad:24},
+            {codigo:"443",nombre:"ENERGIZANTE RED BULL 250 ML",unidad:24},
+            {codigo:"447",nombre:"ENERGIZANTE RED BULL SIN AZUCAR 250 M",unidad:24},
+            {codigo:"501",nombre:"GASEOSA COLOMBIANA 400 ML",unidad:15},
+            {codigo:"514",nombre:"GASEOSA MANZANA 400 ML",unidad:15},
+            {codigo:"526",nombre:"GASEOSA NARANJA 400 ML",unidad:15},
+            {codigo:"535",nombre:"GASEOSA PEPSI 400 ML",unidad:15},
+            {codigo:"138",nombre:"AGUILA LIGHT BOTELLA 330 ML",unidad:30},
+            {codigo:"546",nombre:"GASEOSA UVA 1,5 LT",unidad:12},
+            {codigo:"551",nombre:"GASEOSA UVA 400 ML",unidad:15},
+            {codigo:"556",nombre:"GATORADE BLUE ICE 500 ML",unidad:12},
+            {codigo:"564",nombre:"GATORADE TROPICAL PET 500 ML",unidad:12},
+            {codigo:"681",nombre:"JUGO HIT FRUTAS TROPICALES 500 ML",unidad:12},
+            {codigo:"684",nombre:"JUGO HIT LULO 500 ML",unidad:12},
+            {codigo:"689",nombre:"JUGO HIT MANGO 500ML",unidad:12},
+            {codigo:"693",nombre:"JUGO HIT MORA 500 ML",unidad:12},
+            {codigo:"699",nombre:"JUGO HIT NARANJA PIÑA 500 M",unidad:12},
+            {codigo:"805",nombre:"POKER 1000 ML",unidad:13},
+            {codigo:"807",nombre:"POKER BOTELLA 330 ML",unidad:30},
+            {codigo:"945",nombre:"SODA BRETAÑA 1,5LT",unidad:12},
+            {codigo:"948",nombre:"SODA BRETAÑA FRIOPACK 300 ML",unidad:24},
+            {codigo:"962",nombre:"SPEED MAX LATA 269 ML",unidad:24},
+            {codigo:"963",nombre:"SPEED MAX LATA 310 ML",unidad:24},
+            {codigo:"978",nombre:"STELLA ARTOIS NR 300 ML",unidad:24},
+            {codigo:"444",nombre:"ENERGIZANTE RED BULL CURUBA 250 ML",unidad:24},
+            {codigo:"445",nombre:"ENERGIZANTE RED BULL GREEN 250 ML",unidad:24},
+            {codigo:"446",nombre:"ENERGIZANTE RED BULL SANDIA 250 ML",unidad:24},
+            {codigo:"448",nombre:"ENERGIZANTE RED BULL SUMMER 250 ML",unidad:24},
+            {codigo:"386",nombre:"CORONA CERO NR 330 ML",unidad:24},
+            {codigo:"95",nombre:"AGUARDIENTE BLANCO FIESTA S/A 24 2 LT",unidad:6},
+            {codigo:"89",nombre:"AGUARDIENTE BLANCO 27 S/A NIGHT 375 ML",unidad:24},
+            {codigo:"90",nombre:"AGUARDIENTE BLANCO 27º S/A NIGHT 750 ML",unidad:12},
+            {codigo:"91",nombre:"AGUARDIENTE BLANCO FIESTA 24º 375ML",unidad:24},
+            {codigo:"92",nombre:"AGUARDIENTE BLANCO FIESTA 24º 750ML",unidad:12},
+            {codigo:"93",nombre:"AGUARDIENTE BLANCO FIESTA 24º PET 375ML",unidad:24},
+            {codigo:"94",nombre:"AGUARDIENTE BLANCO 29 S/A 2000 ML",unidad:6},
+            {codigo:"96",nombre:"AGUARDIENTE BLANCO SIN AZUCAR 375ML",unidad:24},
+            {codigo:"97",nombre:"AGUARDIENTE BLANCO SIN AZUCAR 750 ML",unidad:12},
+            {codigo:"98",nombre:"AGUARDIENTE BLANCO SIN AZUCAR PET 375 ML",unidad:24},
+            {codigo:"127",nombre:"AGUARDIENTE ORIGEN ATARDECER 24º 750ML",unidad:12},
+            {codigo:"128",nombre:"AGUARDIENTE ORIGEN FUSION 24º 750ML",unidad:12},
+            {codigo:"129",nombre:"AGUARDIENTE ORIGEN NOCTURNO 24º 750ML",unidad:12},
+            {codigo:"175",nombre:"BRANDY DOMECQ 375 ML",unidad:24},
+            {codigo:"176",nombre:"BRANDY DOMECQ 750 ML",unidad:12},
+            {codigo:"178",nombre:"BRANDY DON PEDRO 12 AÑOS 750 ML",unidad:12},
+            {codigo:"382",nombre:"CONVIER LICOR TRIPLE SEC 750 ML",unidad:12},
+            {codigo:"430",nombre:"DUBONNET 750ML",unidad:12},
+            {codigo:"568",nombre:"GINEBRA BEEFEATER LONDON DRY GIN 350 ML",unidad:12},
+            {codigo:"570",nombre:"GINEBRA BEEFEATER LONDON DRY GIN 700 ML",unidad:12},
+            {codigo:"580",nombre:"GINEBRA GORDONS LONDON DRY GIN 700 ML",unidad:12},
+            {codigo:"585",nombre:"GINEBRA HENDRICKS GIN 350 ML",unidad:6},
+            {codigo:"586",nombre:"GINEBRA HENDRICKS GIN 750 ML",unidad:6},
+            {codigo:"596",nombre:"GINEBRA TANQUERAY LONDON DRY GIN 375 ML",unidad:12},
+            {codigo:"597",nombre:"GINEBRA TANQUERAY LONDON DRY GIN 700 ML",unidad:12},
+            {codigo:"654",nombre:"JAGERMEISTER 350 ML",unidad:6},
+            {codigo:"655",nombre:"JAGERMEISTER 700 ML",unidad:6},
+            {codigo:"656",nombre:"JAGERMEISTER COOLPACK 350",unidad:6},
+            {codigo:"657",nombre:"JP CHENET CHARDONNAY 750 ML",unidad:6},
+            {codigo:"670",nombre:"JP CHENET ICE BLANCO 750 ML",unidad:6},
+            {codigo:"674",nombre:"JP CHENET SPARKLING BRUT 750 ML",unidad:6},
+            {codigo:"675",nombre:"JP CHENET SPARKLING DEMS 750 ML",unidad:6},
+            {codigo:"830",nombre:"RON BACARDI LIMON 750 ML",unidad:12},
+            {codigo:"833",nombre:"RON BACARDI AÑEJO 750ML",unidad:12},
+            {codigo:"837",nombre:"RON BACARDI CARTA BLANCA 750ML",unidad:12},
+            {codigo:"841",nombre:"RON BACARDI MANDARINA 750 ML",unidad:12},
+            {codigo:"849",nombre:"RON CACIQUE AÑEJO 750 ML",unidad:12},
+            {codigo:"850",nombre:"RON CALDAS 15 AÑOS 750 ML",unidad:6},
+            {codigo:"852",nombre:"RON CALDAS 5 SECRETOS BOTELLA 750 ML",unidad:12},
+            {codigo:"858",nombre:"RON CALDAS ESENCIAL 375 ML",unidad:24},
+            {codigo:"859",nombre:"RON CALDAS ESENCIAL 750 ML",unidad:12},
+            {codigo:"862",nombre:"RON CALDAS ROBLE BLANCO BOTELLA 750 ML",unidad:12},
+            {codigo:"864",nombre:"RON CALDAS TRADICIONAL 750 ML",unidad:12},
+            {codigo:"866",nombre:"RON CALDAS TRADICIONAL MEDIA 375 ML",unidad:24},
+            {codigo:"867",nombre:"RON CALDAS TRADICIONAL PET 375 ML",unidad:24},
+            {codigo:"873",nombre:"RON DIPLOMAT MANTUANO EXTRAAÑEJO 700 ML",unidad:12},
+            {codigo:"874",nombre:"RON DIPLOMATICO RESERVA EXCLUSIVA 750 ML",unidad:12},
+            {codigo:"886",nombre:"RON LA HECHICERA 700ML",unidad:12},
+            {codigo:"888",nombre:"RON MARQUES 3 AÑOS 375 ML",unidad:24},
+            {codigo:"889",nombre:"RON MARQUES 8 AÑOS 375 ML",unidad:24},
+            {codigo:"890",nombre:"RON MARQUES 8 AÑOS 750 ML",unidad:12},
+            {codigo:"891",nombre:"RON MARQUES DEL VALLE 3 AÑOS 750 ML",unidad:12},
+            {codigo:"898",nombre:"RON MEDELLIN 5 AÑOS BOTELLA 750 ML",unidad:20},
+            {codigo:"899",nombre:"RON MEDELLIN 5 AÑOS MEDIA 375 ML",unidad:30},
+            {codigo:"900",nombre:"RON MEDELLIN 8 AÑOS 750 ML",unidad:20},
+            {codigo:"901",nombre:"RON MEDELLIN 8 AÑOS MEDIA 375 ML",unidad:30},
+            {codigo:"902",nombre:"RON MEDELLIN DORADO BOTELLA 750 ML",unidad:12},
+            {codigo:"903",nombre:"RON MEDELLIN DORADO MEDIA 375 ML",unidad:24},
+            {codigo:"904",nombre:"RON MEDELLIN GRAN RESERVA 12 AÑOS 750 ML",unidad:12},
+            {codigo:"970",nombre:"TEQUILA HERRADURA ORIGINAL REP. 750 ML",unidad:6},
+            {codigo:"971",nombre:"TEQUILA HERRADURA ORIGINAL AÑEJO 750 ML",unidad:12},
+            {codigo:"994",nombre:"TEQUILA 1800 AÑEJO 750 ML",unidad:12},
+            {codigo:"995",nombre:"TEQUILA 1800 CRISTALINO 700 ML",unidad:12},
+            {codigo:"996",nombre:"TEQUILA 1800 REPOSADO 750 ML",unidad:12},
+            {codigo:"997",nombre:"TEQUILA 1800 SILVER 750 ML",unidad:12},
+            {codigo:"1003",nombre:"TEQUILA BANDOLERO REPOSADO 1000 ML",unidad:12},
+            {codigo:"1004",nombre:"TEQUILA CAZADORES BLANCO 700 ML",unidad:12},
+            {codigo:"1009",nombre:"TEQUILA DON JULIO BLANCO 700 ML",unidad:6},
+            {codigo:"1011",nombre:"TEQUILA GRAN CENTENARIO AÑEJO 695 ML",unidad:1},
+            {codigo:"1012",nombre:"TEQUILA GRAN CENTENARIO PLATA 700 ML",unidad:6},
+            {codigo:"1013",nombre:"TEQUILA GRAN CENTENARIO RESPOSADO 700 ML",unidad:6},
+            {codigo:"1015",nombre:"TEQUILA HERRADURA ORIGINAL REP 700 ML",unidad:1},
+            {codigo:"1017",nombre:"TEQUILA HERRADURA ULTRA AÑEJO 750 ML",unidad:1},
+            {codigo:"1018",nombre:"TEQUILA JIMADOR BLANCO 700 ML",unidad:1},
+            {codigo:"1020",nombre:"TEQUILA JIMADOR CRISTALINO 700 ML",unidad:1},
+            {codigo:"1022",nombre:"TEQUILA JIMADOR REPOSADO 700 ML",unidad:1},
+            {codigo:"1023",nombre:"TEQUILA JOSE CUERVO PLATINO 750 ML",unidad:1},
+            {codigo:"1024",nombre:"TEQUILA JOSE CUERVO REPOSADO 375 ML",unidad:1},
+            {codigo:"1025",nombre:"TEQUILA JOSE CUERVO REPOSADO 750 ML",unidad:1},
+            {codigo:"1027",nombre:"TEQUILA J. CUERVO RVA DE LA FLIA 750 ML",unidad:1},
+            {codigo:"1028",nombre:"TEQUILA JOSE CUERVO SILVER 750 ML",unidad:1},
+            {codigo:"1032",nombre:"TEQUILA LEYENDA MILAGRO BARREL S.750 ML",unidad:1},
+            {codigo:"1038",nombre:"TEQUILA MAESTRO DOBEL DIAMANTE REP 700 M",unidad:1},
+            {codigo:"1039",nombre:"TEQUILA OLMECA ALTOS PLATA 700 ML",unidad:1},
+            {codigo:"1042",nombre:"TEQUILA OLMECA BLANCO 700 ML",unidad:1},
+            {codigo:"1044",nombre:"TEQUILA OLMECA REPOSADO 350ML",unidad:1},
+            {codigo:"1046",nombre:"TEQUILA PATRON AÑEJO 700 ML",unidad:1},
+            {codigo:"1049",nombre:"TEQUILA PATRON REPOSADO 700 - 750 ML",unidad:1},
+            {codigo:"1050",nombre:"TEQUILA PATRON SILVER 700 - 750 ML",unidad:1},
+            {codigo:"1189",nombre:"VINO GATO NEGRO CABER SAUV 750 ML",unidad:1},
+            {codigo:"1194",nombre:"VINO GATO NEGRO MERLOT 750 ML",unidad:1},
+            {codigo:"1214",nombre:"VINO LAMBRUSCO DELL EMILIA ROSO 750 ML",unidad:1},
+            {codigo:"1217",nombre:"VINO LAMBRUSCO REMIGIO ROSATO 750 ML",unidad:1},
+            {codigo:"1303",nombre:"VINO VIENTOS DEL SUR VARIETAL MERLOT",unidad:1},
+            {codigo:"1308",nombre:"VODKA ABSOLUT ORIGINAL 700 ML",unidad:1},
+            {codigo:"1319",nombre:"VODKA GREY GOOSE 700ML",unidad:1},
+            {codigo:"1380",nombre:"WHISKY BLACK & WHITE 700 ML",unidad:1},
+            {codigo:"1385",nombre:"WHISKY BUCHANANS DELUXE 12 AÑOS 375 ML",unidad:1},
+            {codigo:"1386",nombre:"WHISKY BUCHANANS DELUXE 12 AÑOS 750 ML",unidad:1},
+            {codigo:"1387",nombre:"WHISKY BUCHANANS MALTS EDITION 750 ML",unidad:1},
+            {codigo:"1389",nombre:"WHISKY BUCHANANS MASTER 750 ML",unidad:1},
+            {codigo:"1397",nombre:"WHISKY CHIVAS REGAL 12 AÑOS 700 ML",unidad:1},
+            {codigo:"1400",nombre:"WHISKY CHIVAS REGAL 18 AÑOS BOT. 700 ML",unidad:1},
+            {codigo:"1403",nombre:"WHISKY CHIVAS REGAL EXTRA 700 ML",unidad:1},
+            {codigo:"1410",nombre:"WHISKY GLENFIDDICH 12 AÑOS 750 ML",unidad:1},
+            {codigo:"1411",nombre:"WHISKY GLENFIDDICH 15 AÑOS 750 ML",unidad:1},
+            {codigo:"1414",nombre:"WHISKY GLENLIVET 12 AÑOS 700 ML",unidad:1},
+            {codigo:"1417",nombre:"WHISKY GLENLIVET FOUNDERS RESERVE 700ML",unidad:1},
+            {codigo:"1425",nombre:"WHISKY GRANTS TRIPLE WOOD 700 ML",unidad:1},
+            {codigo:"1429",nombre:"WHISKY JACK DANIELS APPLE 700 ML",unidad:1},
+            {codigo:"1434",nombre:"WHISKY JACK DANIELS HONEY 700 ML",unidad:1},
+            {codigo:"1435",nombre:"WHISKY JACK DANIELS HONEY 750 ML",unidad:1},
+            {codigo:"1438",nombre:"WHISKY JACK DANIELS SOUR 375 ML",unidad:1},
+            {codigo:"1439",nombre:"WHISKY JACK DANIELS SOUR 700 ML",unidad:1},
+            {codigo:"1440",nombre:"WHISKY JACK DANIELS SOUR 750 ML",unidad:1},
+            {codigo:"1448",nombre:"WHISKY JOHNNIE WALKER 18 AÑOS 750 ML",unidad:1},
+            {codigo:"1450",nombre:"WHISKY JOHNNIE WALKER BLACK LABEL 375 ML",unidad:1},
+            {codigo:"1451",nombre:"WHISKY JOHNNIE WALKER BLACK LABEL 700 ML",unidad:1},
+            {codigo:"1452",nombre:"WHISKY JOHNNIE WALKER BLUE LABEL 750 ML",unidad:1},
+            {codigo:"1453",nombre:"WHISKY JW DOUBLE BLACK 700 ML",unidad:1},
+            {codigo:"1455",nombre:"WHISKY JW GOLD LABEL RESERVE 700 ML",unidad:1},
+            {codigo:"1457",nombre:"WHISKY JOHNNIE WALKER RED LABEL 200 ML",unidad:1},
+            {codigo:"1465",nombre:"WHISKY MONKEY SHOULDER ORIGINAL 700 ML",unidad:1},
+            {codigo:"1468",nombre:"WHISKY OLD PARR 12 AÑOS 1000 ML",unidad:1},
+            {codigo:"1470",nombre:"WHISKY OLD PARR 12 AÑOS 500 ML",unidad:1},
+            {codigo:"1471",nombre:"WHISKY OLD PARR 12 AÑOS 750 ML",unidad:1},
+            {codigo:"1956",nombre:"ITEM 20804 - HEINEKEN 250 ml",unidad:24},
+            {codigo:"1487",nombre:"WHISKY SOMETHING SPECIAL 350 ML",unidad:1},
+            {codigo:"1488",nombre:"WHISKY SOMETHING SPECIAL 750 ML",unidad:1},
+            {codigo:"1879",nombre:"ITEM 102060-SOL BRN 330 ML",unidad:24},
+            {codigo:"1492",nombre:"WHISKY THE HIGHLAND SUPREME 750 ML",unidad:1},
+            {codigo:"1529",nombre:"JP CHENET DIVINE BRUT CHARDONAY 750 ML",unidad:1},
+            {codigo:"1541",nombre:"VINO ESTORIL 750 ML",unidad:1},
+            {codigo:"1542",nombre:"WHISKY SCOTTISH FOX 700 ML",unidad:1},
+            {codigo:"257",nombre:"CHOCLITOS LIMÓN 210 GRS",unidad:1},
+            {codigo:"1779",nombre:"ENERGIZANTE RED BULL TROPICAL 250 ML",unidad:24},
+            {codigo:"563",nombre:"GATORADE TROPICAL X 1000 ML",unidad:12},
+            {codigo:"548",nombre:"GASEOSA UVA 2,5 LT",unidad:8},
+            {codigo:"68",nombre:"AGUARDIENTE AMARILLO MANZANARES X 750",unidad:12},
+            {codigo:"532",nombre:"GASEOSA UVA X 400 ML",unidad:15},
+            {codigo:"553",nombre:"GASEOSA UVA ECONOLITRO",unidad:12},
+            {codigo:"527",nombre:"GASEOSA NARANJA ECONOLITRO",unidad:12},
+            {codigo:"270",nombre:"CIGARRILLO CHESTERFIELD BLUE MEDIA",unidad:10},
+            {codigo:"277",nombre:"CIGARRILLO L&M BLUE SELECTION MEDIA",unidad:10},
+            {codigo:"278",nombre:"CIGARRILLO L&M EVO VERDE ROJO MEDIA",unidad:10},
+            {codigo:"293",nombre:"CIGARRILLO MARLBORO BLUE MEDIA",unidad:10},
+            {codigo:"302",nombre:"CIGARRILLO MARLBORO VTA MORADO AZ CLLA",unidad:20},
+            {codigo:"304",nombre:"CIGARRILLO MARLBORO VTA ROJO VERDE CLLA",unidad:20},
+            {codigo:"320",nombre:"CIGARRILLO STARLITE MEDIA",unidad:10},
+            {codigo:"509",nombre:"GASEOSA MANZANA X 500 ML",unidad:15},
+            {codigo:"502",nombre:"GASEOSA COLOMBIANA X 500 ML",unidad:15},
+            {codigo:"552",nombre:"GASEOSA UVA X 500 ML",unidad:15},
+            {codigo:"504",nombre:"GASEOSA COLOMBIANA ECONOLITRO",unidad:12},
+            {codigo:"539",nombre:"GASEOSA PEPSI ECONOLITRO",unidad:12},
+            {codigo:"516",nombre:"GASEOSA ECONOLITRO MANZANA",unidad:12}
+        ];
 
-    <div id="vista-lista-cierres" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>📅 Registro de Cierres de Día</h2>
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>FECHA CIERRE</th><th>FACTS</th><th>TOTAL ACUMULADO</th><th>ACCIONES</th></tr></thead>
-                <tbody id="tabla-cierres-body"></tbody>
-            </table>
-            <button class="btn btn-nuevo" style="margin-top:20px" onclick="cambiarVista('vista-factura')">VOLVER</button>
-        </div>
-    </div>
+        let dbProductos = JSON.parse(localStorage.getItem('lico_db')) || bdInicial;
+        let historialVisual = JSON.parse(localStorage.getItem('lico_historial_visual')) || [];
 
-    <div id="vista-db" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>⚙️ Base de Datos de Productos</h2>
-            <input type="file" id="import-file" accept=".xlsx, .xls">
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>CODIGO</th><th>DESCRIPCION</th><th>UNIDADES/CAJA</th></tr></thead>
-                <tbody id="lista-db"></tbody>
-            </table>
-            <button class="btn btn-nuevo" style="margin-top:20px" onclick="cambiarVista('vista-factura')">VOLVER</button>
-        </div>
-    </div>
+        function init() {
+            renderizarFilas();
+            renderizarDB();
+            document.getElementById('fecha-input').value = new Date().toLocaleDateString();
+            document.getElementById('import-file').addEventListener('change', manejarImportacion);
+            verificarRespaldoSemanal();
+        }
 
-    <!-- Enlace a la lógica de JavaScript separada -->
-    <script src="script.js"></script>
+        function verificarRespaldoSemanal() {
+            const ultima = localStorage.getItem('lico_ultima_exportacion');
+            if (ultima) {
+                const dias = (new Date().getTime() - parseInt(ultima)) / (1000 * 60 * 60 * 24);
+                if (dias >= 7) document.getElementById('bloqueo-seguridad').style.display = 'flex';
+            } else {
+                localStorage.setItem('lico_ultima_exportacion', new Date().getTime());
+            }
+        }
+
+        function aniadirItemManual() {
+            const cod = prompt("Ingrese el Código del producto:");
+            if (!cod) return;
+            const nom = prompt("Ingrese la Descripción/Nombre:");
+            if (!nom) return;
+            const uni = prompt("Ingrese Unidades por Caja:", "1");
+            if (!uni) return;
+
+            dbProductos.push({
+                codigo: String(cod),
+                nombre: nom.toUpperCase(),
+                unidad: parseInt(uni) || 1
+            });
+
+            localStorage.setItem('lico_db', JSON.stringify(dbProductos));
+            renderizarDB();
+            alert("Producto añadido.");
+        }
+
+        function renderizarFilas() {
+            const body = document.getElementById('body-factura');
+            body.innerHTML = "";
+            for(let i=0; i<15; i++) {
+                body.innerHTML += `
+                <tr class="fila-p">
+                    <td><input type="text" class="cod-in" onkeyup="buscarPorCodigo(this)"></td>
+                    <td style="width:250px"><input type="text" class="nom-in" oninput="buscarSugerencias(this)"><div class="sugerencias"></div></td>
+                    <td><input type="number" class="caj" oninput="calcular(this)"></td>
+                    <td><input type="number" class="uds" readonly></td>
+                    <td><input type="number" class="pre" oninput="calcular(this)"></td>
+                    <td align="right">$ <span class="pun">0</span></td>
+                    <td align="right">$ <span class="tot">0</span></td>
+                </tr>`;
+            }
+        }
+
+        function buscarPorCodigo(input) {
+            const cod = input.value.trim();
+            if(cod === "") return;
+            const p = dbProductos.find(x => String(x.codigo).trim() === cod);
+            if(p) {
+                const f = input.closest('tr');
+                f.querySelector('.nom-in').value = p.nombre;
+                f.dataset.uCaja = p.unidad;
+                f.querySelector('.caj').value = 1;
+                calcular(f.querySelector('.caj'));
+            }
+        }
+
+        function buscarSugerencias(input) {
+            const container = input.nextElementSibling;
+            const texto = input.value.toLowerCase();
+            container.innerHTML = "";
+            if(texto.length < 2) { container.style.display = "none"; return; }
+            dbProductos.filter(p => p.nombre.toLowerCase().includes(texto)).slice(0,8).forEach(p => {
+                const div = document.createElement('div');
+                div.className = "sugerencia-item";
+                div.innerHTML = p.nombre;
+                div.onclick = () => {
+                    const f = input.closest('tr');
+                    f.querySelector('.cod-in').value = p.codigo;
+                    f.querySelector('.nom-in').value = p.nombre;
+                    f.dataset.uCaja = p.unidad;
+                    f.querySelector('.caj').value = 1;
+                    container.style.display = "none";
+                    calcular(f.querySelector('.caj'));
+                };
+                container.appendChild(div);
+            });
+            container.style.display = "block";
+        }
+
+        function calcular(el) {
+            const f = el.closest('tr');
+            const caj = parseFloat(f.querySelector('.caj').value) || 0;
+            const pre = parseFloat(f.querySelector('.pre').value) || 0;
+            const uCaja = parseFloat(f.dataset.uCaja) || 1;
+            const tUds = caj * uCaja;
+            const tFila = caj * pre;
+            f.querySelector('.uds').value = tUds;
+            f.querySelector('.tot').innerText = tFila.toLocaleString('de-DE');
+            f.querySelector('.pun').innerText = tUds > 0 ? (tFila/tUds).toLocaleString('de-DE', {maximumFractionDigits:0}) : 0;
+            recalcularTotalesBase();
+        }
+
+        function recalcularTotalesBase() {
+            let suma = 0;
+            document.querySelectorAll('.tot').forEach(s => suma += parseFloat(s.innerText.replace(/\./g,'')) || 0);
+            document.getElementById('subtotal-factura').innerText = '$ ' + suma.toLocaleString('de-DE');
+            recalcularConNota();
+        }
+
+        function recalcularConNota() {
+            const subText = document.getElementById('subtotal-factura').innerText.replace('$ ','').replace(/\./g,'');
+            const sub = parseFloat(subText) || 0;
+            const nota = parseFloat(document.getElementById('nota-credito').value.replace(/[^\d]/g, '')) || 0;
+            document.getElementById('total-factura').innerText = '$ ' + (sub - nota).toLocaleString('de-DE');
+        }
+
+        function guardarFacturaVisual() {
+            const cli = document.getElementById('cliente-input').value;
+            if(!cli) return alert("Ingrese el cliente");
+            const area = document.getElementById('area-captura');
+            const clon = area.cloneNode(true);
+            clon.querySelectorAll('.fila-p').forEach(f => { if(!f.querySelector('.cod-in').value) f.remove(); });
+            clon.querySelectorAll('input').forEach(ins => {
+                const span = document.createElement('span'); span.innerText = ins.value; ins.parentNode.replaceChild(span, ins);
+            });
+            historialVisual.push({
+                id: document.getElementById('n-factura').value,
+                fecha: document.getElementById('fecha-input').value,
+                cliente: cli,
+                total: document.getElementById('total-factura').innerText,
+                html: clon.innerHTML
+            });
+            localStorage.setItem('lico_historial_visual', JSON.stringify(historialVisual));
+            alert("Guardado");
+        }
+
+        function exportarTodoExcel() {
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dbProductos), "Productos");
+            XLSX.writeFile(wb, "Respaldo_LicoExpress.xlsx");
+            localStorage.setItem('lico_ultima_exportacion', new Date().getTime());
+            document.getElementById('bloqueo-seguridad').style.display = 'none';
+        }
+
+        function cambiarVista(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'vista-historial') renderizarHistorial();
+        }
+
+        function renderizarHistorial() {
+            document.getElementById('lista-historial').innerHTML = historialVisual.map((f, i) => `<tr><td>${f.id}</td><td>${f.fecha}</td><td>${f.cliente}</td><td>${f.total}</td><td align="center"><button onclick="verCaptura(${i})">👁️</button></td></tr>`).join('');
+        }
+
+        function verCaptura(i) {
+            document.getElementById('contenido-modal').innerHTML = historialVisual[i].html;
+            document.getElementById('modalFactura').style.display = "block";
+        }
+
+        function cerrarModal() { document.getElementById('modalFactura').style.display = "none"; }
+        function renderizarDB() { document.getElementById('lista-db').innerHTML = dbProductos.map(p => `<tr><td>${p.codigo}</td><td>${p.nombre}</td><td>${p.unidad}</td></tr>`).join(''); }
+
+        function manejarImportacion(e) {
+            const r = new FileReader();
+            r.onload = (x) => {
+                const j = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(x.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(x.target.result), {type:'array'}).SheetNames[0]]);
+                dbProductos = j.map(i => ({codigo:String(i.CODIGO||i.codigo), nombre:i.DESCRIPCION||i.descripcion, unidad:i.UNIDAD||1}));
+                localStorage.setItem('lico_db', JSON.stringify(dbProductos)); renderizarDB();
+            };
+            r.readAsArrayBuffer(e.target.files[0]);
+        }
+
+        function nuevaFactura() {
+            if(confirm("¿Nueva factura?")) location.reload();
+        }
+    </script>
 </body>
 </html>
