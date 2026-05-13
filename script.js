@@ -78,38 +78,40 @@ function guardarFacturaVisual() {
     alert("Factura guardada correctamente.");
 }
 
-// --- FUNCIÓN DE EXPORTACIÓN TOTAL MEJORADA ---
+// Lógica de autorrelleno por CÓDIGO
+function buscarPorCodigo(input) {
+    const codigoBuscado = input.value.trim();
+    if (codigoBuscado.length < 1) return;
+
+    const producto = dbProductos.find(p => String(p.codigo) === codigoBuscado);
+    if (producto) {
+        const f = input.closest('tr');
+        f.querySelector('.nom-in').value = producto.nombre;
+        f.dataset.uCaja = producto.unidad;
+        f.querySelector('.caj').value = producto.unidad; // Valor por defecto igual a la unidad de caja
+        calcular(f.querySelector('.caj'));
+    }
+}
+
 function exportarTodoExcel() {
     try {
         const wb = XLSX.utils.book_new();
         let todasLasVentas = [];
-
-        // 1. Recolectar facturas del historial actual (las que no se han cerrado)
         historialVisual.forEach(f => extraerDatosFactura(f, todasLasVentas, "Pendiente de Cierre"));
-
-        // 2. Recolectar facturas de todos los cierres guardados
         cierresDia.forEach(cierre => {
             cierre.facturas.forEach(f => {
                 extraerDatosFactura(f, todasLasVentas, cierre.fechaCierre);
             });
         });
-
-        // Crear las pestañas en el Excel
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(todasLasVentas), "Ventas Detalladas");
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cierresDia.map(c=>({Fecha:c.fechaCierre, Cantidad_Facts:c.cantidadFacturas, Total_Cierre:c.totalAcumulado}))), "Resumen Cierres");
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dbProductos), "Inventario_DB");
-
         XLSX.writeFile(wb, "REPORTE_TOTAL_LICOEXPRESS.xlsx");
-        
         localStorage.setItem('lico_ultima_exportacion', new Date().getTime());
         document.getElementById('bloqueo-seguridad').style.display = 'none';
-    } catch (e) { 
-        alert("Error al exportar: " + e.message); 
-        console.error(e);
-    }
+    } catch (e) { alert("Error al exportar: " + e.message); }
 }
 
-// Función auxiliar para procesar el HTML de las facturas y volverlo filas de Excel
 function extraerDatosFactura(f, arrayDestino, fechaCierreRef) {
     let tempDiv = document.createElement('div');
     tempDiv.innerHTML = f.html;
@@ -118,15 +120,10 @@ function extraerDatosFactura(f, arrayDestino, fechaCierreRef) {
         if(celdas.length >= 6) {
             arrayDestino.push({
                 "Estado/Cierre": fechaCierreRef,
-                "Factura": f.id, 
-                "Fecha": f.fecha, 
-                "Cliente": f.cliente,
-                "Código": celdas[0].innerText, 
-                "Descripción": celdas[1].innerText,
-                "Cajas": celdas[2].innerText, 
-                "Cant_Unid": celdas[3].innerText,
-                "Precio_Venta": celdas[4].innerText, 
-                "Total_Producto": celdas[6].innerText,
+                "Factura": f.id, "Fecha": f.fecha, "Cliente": f.cliente,
+                "Código": celdas[0].innerText, "Descripción": celdas[1].innerText,
+                "Cajas": celdas[2].innerText, "Cant_Unid": celdas[3].innerText,
+                "Precio_Venta": celdas[4].innerText, "Total_Producto": celdas[6].innerText,
                 "Total_Factura": f.total
             });
         }
@@ -139,7 +136,7 @@ function renderizarFilas() {
     for(let i=0; i<15; i++) {
         body.innerHTML += `
         <tr class="fila-p">
-            <td><input type="text" class="cod-in"></td>
+            <td><input type="text" class="cod-in" oninput="buscarPorCodigo(this)"></td>
             <td style="width:250px"><input type="text" class="nom-in" oninput="buscarSugerencias(this)"><div class="sugerencias"></div></td>
             <td><input type="number" class="caj" oninput="calcular(this)"></td>
             <td><input type="number" class="uds" readonly></td>
