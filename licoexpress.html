@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Facturación LICOEXPRESS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --azul-oscuro: #002060;
+            --negro-borde: #000000;
+        }
+
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; justify-content: center; }
+        .view { display: none; }
+        .view.active { display: flex; gap: 20px; }
+
+        .main-container { max-width: 1200px; background: #ffffff; padding: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        .factura-wrapper { flex: 3; }
+
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2px; }
+        input { width: 100%; border: none; padding: 4px; box-sizing: border-box; background: transparent; display: block; }
+        input:focus { outline: none; background: #e8f0fe; }
+        input[readonly] { cursor: default; color: #333; }
+
+        .label-cell { background-color: var(--azul-oscuro); color: #ffffff; font-weight: bold; width: 120px; text-align: center; border: 1px solid var(--negro-borde); }
+        .value-cell { border: 1px solid var(--negro-borde); text-align: center; }
+
+        .productos-table th { background-color: var(--azul-oscuro); color: #ffffff; font-size: 11px; border: 1px solid var(--negro-borde); padding: 8px; }
+        .productos-table td { border: 1px solid var(--negro-borde); height: 30px; }
+
+        .totales-table td { border: 1px solid var(--negro-borde); height: 25px; }
+        .label-total { background-color: var(--azul-oscuro); color: white; font-weight: bold; width: 150px; padding-left: 5px; }
+        .value-total { text-align: right; padding-right: 10px; font-weight: bold; }
+
+        .sidebar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .logo-placeholder { width: 140px; height: 140px; border-radius: 50%; border: 3px solid #cc0000; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; text-align: center; }
+
+        .btn { width: 100%; border: none; color: white; font-weight: bold; padding: 15px; cursor: pointer; border-radius: 4px; text-align: center; }
+        .btn-guardar { background: linear-gradient(to right, #000a30, #004e92); }
+        .btn-nuevo { background: linear-gradient(to right, #00d2ff, #3a7bd5); }
+        .btn-finalizar { background: linear-gradient(to bottom, #ff0000, #4b0000); }
+        .btn-db { background: #28a745; }
+
+        /* Estilos DB */
+        .db-container { flex-direction: column; width: 1000px; background: white; padding: 20px; }
+        .import-box { border: 2px dashed var(--azul-oscuro); padding: 20px; text-align: center; margin-bottom: 20px; background: #f9f9f9; }
+    </style>
+</head>
+<body onload="init()">
+
+    <div id="vista-factura" class="view active main-container">
+        <div class="factura-wrapper">
+            <table>
+                <tr><td class="label-cell">FACTURA</td><td class="value-cell" colspan="6"><input type="text" value="CLAH" style="text-align:center; font-weight:bold;"></td></tr>
+                <tr><td class="label-cell">FECHA</td><td class="value-cell" colspan="6"><input type="text" id="fecha-input" style="text-align:center;"></td></tr>
+                <tr><td class="label-cell">CLIENTE</td><td class="value-cell" colspan="6"><input type="text" placeholder="ESCRIBA NOMBRE DEL CLIENTE" style="text-align:center; font-weight:bold;"></td></tr>
+                <tr><td class="label-cell">CEDI</td><td class="value-cell" colspan="6"><input type="text" value="ARROYOHONDO" readonly style="text-align:center;"></td></tr>
+            </table>
+
+            <table class="productos-table">
+                <thead>
+                    <tr><th>CODIGO</th><th>DESCRIPCION</th><th>CANTIDAD CAJAS</th><th>CANTIDAD UNIDAD</th><th>PRECIO DE VENTA</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>
+                </thead>
+                <tbody id="body-factura"></tbody>
+            </table>
+
+            <table class="totales-table">
+                <tr><td colspan="5" style="border:none;"></td><td class="label-total">SUBTOTAL</td><td class="value-total" id="subtotal">$ 0</td></tr>
+                <tr><td colspan="5" style="border:none;"></td><td class="label-total">VALOR FACTURA</td><td class="value-total" id="total-factura">$ 0</td></tr>
+            </table>
+        </div>
+
+        <div class="sidebar">
+            <div class="logo-placeholder"><span style="font-size: 8px;">DESDE 1980</span><span>LICOEXPRESS</span><span style="font-size: 9px;">TIENDA DE LICORES</span></div>
+            <button class="btn btn-guardar">GUARDAR FACTURA</button>
+            <button class="btn btn-nuevo" onclick="window.location.reload()">NUEVO CLIENTE</button>
+            <button class="btn btn-finalizar">FINALIZAR DIA</button>
+            <hr style="width:100%">
+            <button class="btn btn-db" onclick="cambiarVista('vista-db')">BASE DE DATOS</button>
+        </div>
+    </div>
+
+    <div id="vista-db" class="view main-container db-container">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h2>Gestión de Base de Datos</h2>
+            <button class="btn btn-guardar" style="width:150px" onclick="cambiarVista('vista-factura')">VOLVER</button>
+        </div>
+
+        <div class="import-box">
+            <p>Seleccione su archivo Excel (bd.xlsx) para importar los productos:</p>
+            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="productos-table">
+                <thead><tr><th>CODIGO</th><th>DESCRIPCION</th><th>UNIDAD</th></tr></thead>
+                <tbody id="lista-db"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let dbProductos = JSON.parse(localStorage.getItem('lico_db')) || [];
+
+        function init() {
+            renderizarFilas();
+            renderizarDB();
+            document.getElementById('fecha-input').value = new Date().toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+            document.getElementById('excel-file').addEventListener('change', manejarArchivo);
+        }
+
+        function cambiarVista(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function renderizarFilas() {
+            const body = document.getElementById('body-factura');
+            for(let i=0; i<12; i++) {
+                body.innerHTML += `
+                <tr class="fila-p">
+                    <td><input type="text" onchange="buscarProducto(this)"></td>
+                    <td><input type="text" class="nom"></td>
+                    <td><input type="number" class="caj" oninput="calcular(this)"></td>
+                    <td><input type="number" class="uds" readonly></td>
+                    <td><input type="number" class="pre" oninput="calcular(this)"></td>
+                    <td align="right">$ <span class="pun">0</span></td>
+                    <td align="right">$ <span class="tot">0</span></td>
+                </tr>`;
+            }
+        }
+
+        function buscarProducto(input) {
+            const fila = input.closest('tr');
+            const p = dbProductos.find(x => x.codigo == input.value);
+            if(p) {
+                fila.querySelector('.nom').value = p.nombre;
+                fila.dataset.uCaja = p.unidad;
+                calcular(input);
+            }
+        }
+
+        function calcular(el) {
+            const f = el.closest('tr');
+            const caj = parseFloat(f.querySelector('.caj').value) || 0;
+            const pre = parseFloat(f.querySelector('.pre').value) || 0;
+            const uCaja = parseFloat(f.dataset.uCaja) || 1;
+
+            const totalUds = caj * uCaja;
+            const totalFila = caj * pre;
+            
+            f.querySelector('.uds').value = totalUds;
+            f.querySelector('.tot').innerText = totalFila.toLocaleString('de-DE');
+            f.querySelector('.pun').innerText = totalUds > 0 ? (totalFila / totalUds).toLocaleString('de-DE', {maximumFractionDigits:0}) : 0;
+            
+            let total = 0;
+            document.querySelectorAll('.tot').forEach(s => total += parseFloat(s.innerText.replace(/\./g,'')) || 0);
+            document.getElementById('subtotal').innerText = '$ ' + total.toLocaleString('de-DE');
+            document.getElementById('total-factura').innerText = '$ ' + total.toLocaleString('de-DE');
+        }
+
+        function renderizarDB() {
+            const lista = document.getElementById('lista-db');
+            lista.innerHTML = dbProductos.map(p => `<tr><td>${p.codigo}</td><td>${p.nombre}</td><td>${p.unidad}</td></tr>`).join('');
+        }
+
+        function manejarArchivo(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                dbProductos = json.map(row => ({
+                    codigo: row.CODIGO || row.codigo || "",
+                    nombre: row.DESCRIPCION || row.descripcion || "",
+                    unidad: row.UNIDAD || row.unidad || 1
+                })).filter(p => p.codigo !== "");
+
+                localStorage.setItem('lico_db', JSON.stringify(dbProductos));
+                renderizarDB();
+                alert("¡Base de datos cargada!");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>
