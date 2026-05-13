@@ -78,17 +78,19 @@ function guardarFacturaVisual() {
     alert("Factura guardada correctamente.");
 }
 
-// Lógica de autorrelleno por CÓDIGO
+// CORRECCIÓN: Función de búsqueda por código mejorada
 function buscarPorCodigo(input) {
-    const codigoBuscado = input.value.trim();
-    if (codigoBuscado.length < 1) return;
+    const valorBusqueda = input.value.trim();
+    if (valorBusqueda === "") return;
 
-    const producto = dbProductos.find(p => String(p.codigo) === codigoBuscado);
+    // Buscamos el producto que coincida exactamente con el código
+    const producto = dbProductos.find(p => String(p.codigo).trim() === valorBusqueda);
+
     if (producto) {
         const f = input.closest('tr');
         f.querySelector('.nom-in').value = producto.nombre;
         f.dataset.uCaja = producto.unidad;
-        f.querySelector('.caj').value = producto.unidad; // Valor por defecto igual a la unidad de caja
+        f.querySelector('.caj').value = 1; // Ponemos 1 caja por defecto al encontrarlo
         calcular(f.querySelector('.caj'));
     }
 }
@@ -136,7 +138,7 @@ function renderizarFilas() {
     for(let i=0; i<15; i++) {
         body.innerHTML += `
         <tr class="fila-p">
-            <td><input type="text" class="cod-in" oninput="buscarPorCodigo(this)"></td>
+            <td><input type="text" class="cod-in" onkeyup="buscarPorCodigo(this)"></td>
             <td style="width:250px"><input type="text" class="nom-in" oninput="buscarSugerencias(this)"><div class="sugerencias"></div></td>
             <td><input type="number" class="caj" oninput="calcular(this)"></td>
             <td><input type="number" class="uds" readonly></td>
@@ -161,7 +163,7 @@ function buscarSugerencias(input) {
             f.querySelector('.cod-in').value = p.codigo;
             f.querySelector('.nom-in').value = p.nombre;
             f.dataset.uCaja = p.unidad;
-            f.querySelector('.caj').value = p.unidad;
+            f.querySelector('.caj').value = 1;
             container.style.display = "none";
             calcular(f.querySelector('.caj'));
             f.querySelector('.pre').focus();
