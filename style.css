@@ -1,0 +1,77 @@
+:root { --azul-oscuro: #002060; --negro-borde: #000; }
+body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; justify-content: center; }
+.view { display: none; }
+.view.active { display: flex; gap: 20px; }
+.main-container { max-width: 1200px; background: #fff; padding: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+.factura-wrapper { flex: 3; position: relative; background: white; padding: 10px; }
+
+/* Bloqueo de Seguridad */
+#bloqueo-seguridad {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.95); z-index: 9999;
+    color: white; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+}
+
+.tabla-factura { border-collapse: collapse; width: 100%; margin-bottom: 2px; }
+.tabla-factura input { width: 100%; border: none; padding: 4px; box-sizing: border-box; background: transparent; display: block; font-family: Arial; }
+.label-cell { background-color: var(--azul-oscuro); color: #fff; font-weight: bold; width: 120px; text-align: center; border: 1px solid var(--negro-borde); font-size: 12px; }
+.value-cell { border: 1px solid var(--negro-borde); text-align: center; }
+
+.productos-table th { background-color: var(--azul-oscuro); color: #fff; font-size: 11px; border: 1px solid var(--negro-borde); padding: 8px; }
+.productos-table td { border: 1px solid var(--negro-borde); height: 28px; position: relative; font-size: 12px; }
+
+/* Estilos para la sección de totales tipo Excel */
+.seccion-totales { width: 100%; border-collapse: collapse; margin-top: -1px; }
+.seccion-totales td { border: 1px solid var(--negro-borde); height: 25px; font-size: 12px; }
+.label-total { background-color: var(--azul-oscuro); color: white; font-weight: bold; width: 150px; padding-left: 8px; text-transform: uppercase; }
+.value-total { text-align: right; padding-right: 10px; font-weight: bold; width: 150px; }
+.input-nota { width: 100%; border: none; text-align: right; font-weight: bold; color: #cc0000; padding-right: 10px; box-sizing: border-box; }
+
+.sidebar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; min-width: 200px; }
+.logo-placeholder { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #cc0000; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; text-align: center; color: #000; margin-bottom: 10px; }
+
+.grupo-botones { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid #eee; }
+.titulo-grupo { font-size: 11px; color: #666; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; text-align: center; }
+
+/* Animaciones de botones */
+.btn { 
+    width: 100%; border: none; color: white; font-weight: bold; padding: 12px; cursor: pointer; border-radius: 6px; 
+    text-align: center; text-decoration: none; font-size: 13px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; overflow: hidden;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); filter: brightness(1.15); }
+.btn:active { transform: translateY(1px); box-shadow: 0 2px 3px rgba(0,0,0,0.2); filter: brightness(0.9); }
+.btn-guardar { background: linear-gradient(135deg, #000a30, #004e92); }
+.btn-nuevo { background: linear-gradient(135deg, #00d2ff, #3a7bd5); }
+.btn-historial { background: #ffc107; color: #000; }
+.btn-db { background: #28a745; }
+.btn-respaldo { background: #d35400; animation: pulse-border 2s infinite; }
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(211, 84, 0, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(211, 84, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(211, 84, 0, 0); }
+}
+
+.sugerencias { position: absolute; background: white; border: 1px solid #ccc; z-index: 100; width: 100%; max-height: 150px; overflow-y: auto; display: none; top: 100%; }
+.sugerencia-item { padding: 8px; cursor: pointer; font-size: 11px; border-bottom: 1px solid #eee; color: #000; }
+
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); overflow-y: auto; padding: 40px 0; }
+.modal-content { background: white; margin: auto; padding: 20px; width: 850px; position: relative; }
+.close-modal { position: absolute; right: 20px; top: 10px; font-size: 30px; cursor: pointer; color: red; font-weight: bold; }
+
+@media print {
+    @page { size: letter; margin: 1cm; }
+    .sidebar, .sugerencias, .btn, .no-print, .close-modal, .view:not(.active), h2, h3 { display: none !important; }
+    body { background: white; padding: 0; display: block; }
+    .main-container { box-shadow: none; border: none; width: 100% !important; padding: 0; margin: 0; }
+    .modal { position: relative; display: block; background: white; padding: 0; width: 100%; }
+    .modal-content { box-shadow: none; width: 100% !important; padding: 0; border: none; margin: 0; }
+    .tabla-factura, .seccion-totales { width: 100% !important; table-layout: fixed; }
+    .label-cell, .label-total { background-color: #eee !important; color: black !important; border: 1px solid black !important; -webkit-print-color-adjust: exact; }
+    .value-cell, .seccion-totales td { border: 1px solid black !important; }
+    .productos-table th:nth-child(n+4), .productos-table td:nth-child(n+4), .seccion-totales { display: none !important; }
+    .productos-table th { background-color: #eee !important; color: black !important; border: 1px solid black !important; }
+}
