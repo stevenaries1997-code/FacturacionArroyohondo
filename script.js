@@ -37,7 +37,6 @@ function calcular(el) {
 function recalcularTotalesBase() {
     let suma = 0;
     document.querySelectorAll('.tot').forEach(s => suma += parseFloat(s.innerText.replace(/\./g,'')) || 0);
-    
     document.getElementById('subtotal-factura').innerText = '$ ' + suma.toLocaleString('de-DE');
     recalcularConNota();
 }
@@ -45,12 +44,9 @@ function recalcularTotalesBase() {
 function recalcularConNota() {
     const subtotalText = document.getElementById('subtotal-factura').innerText.replace('$ ','').replace(/\./g,'');
     const subtotal = parseFloat(subtotalText) || 0;
-    
     const notaInput = document.getElementById('nota-credito').value;
     const notaValor = parseFloat(notaInput.replace(/[^\d]/g, '')) || 0;
-    
     const totalFinal = subtotal - notaValor;
-    
     document.getElementById('total-factura').innerText = '$ ' + totalFinal.toLocaleString('de-DE');
 }
 
@@ -67,7 +63,6 @@ function guardarFacturaVisual() {
     clon.querySelectorAll('input').forEach(ins => {
         const span = document.createElement('span');
         span.innerText = ins.value;
-        span.style.fontWeight = "bold";
         ins.parentNode.replaceChild(span, ins);
     });
 
@@ -80,7 +75,62 @@ function guardarFacturaVisual() {
     });
 
     localStorage.setItem('lico_historial_visual', JSON.stringify(historialVisual));
-    alert("Factura guardada en el historial.");
+    alert("Factura guardada correctamente.");
+}
+
+// --- FUNCIÓN DE EXPORTACIÓN TOTAL MEJORADA ---
+function exportarTodoExcel() {
+    try {
+        const wb = XLSX.utils.book_new();
+        let todasLasVentas = [];
+
+        // 1. Recolectar facturas del historial actual (las que no se han cerrado)
+        historialVisual.forEach(f => extraerDatosFactura(f, todasLasVentas, "Pendiente de Cierre"));
+
+        // 2. Recolectar facturas de todos los cierres guardados
+        cierresDia.forEach(cierre => {
+            cierre.facturas.forEach(f => {
+                extraerDatosFactura(f, todasLasVentas, cierre.fechaCierre);
+            });
+        });
+
+        // Crear las pestañas en el Excel
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(todasLasVentas), "Ventas Detalladas");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cierresDia.map(c=>({Fecha:c.fechaCierre, Cantidad_Facts:c.cantidadFacturas, Total_Cierre:c.totalAcumulado}))), "Resumen Cierres");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dbProductos), "Inventario_DB");
+
+        XLSX.writeFile(wb, "REPORTE_TOTAL_LICOEXPRESS.xlsx");
+        
+        localStorage.setItem('lico_ultima_exportacion', new Date().getTime());
+        document.getElementById('bloqueo-seguridad').style.display = 'none';
+    } catch (e) { 
+        alert("Error al exportar: " + e.message); 
+        console.error(e);
+    }
+}
+
+// Función auxiliar para procesar el HTML de las facturas y volverlo filas de Excel
+function extraerDatosFactura(f, arrayDestino, fechaCierreRef) {
+    let tempDiv = document.createElement('div');
+    tempDiv.innerHTML = f.html;
+    tempDiv.querySelectorAll('.fila-p').forEach(fila => {
+        let celdas = fila.querySelectorAll('span');
+        if(celdas.length >= 6) {
+            arrayDestino.push({
+                "Estado/Cierre": fechaCierreRef,
+                "Factura": f.id, 
+                "Fecha": f.fecha, 
+                "Cliente": f.cliente,
+                "Código": celdas[0].innerText, 
+                "Descripción": celdas[1].innerText,
+                "Cajas": celdas[2].innerText, 
+                "Cant_Unid": celdas[3].innerText,
+                "Precio_Venta": celdas[4].innerText, 
+                "Total_Producto": celdas[6].innerText,
+                "Total_Factura": f.total
+            });
+        }
+    });
 }
 
 function renderizarFilas() {
@@ -124,37 +174,8 @@ function buscarSugerencias(input) {
     container.style.display = "block";
 }
 
-function exportarTodoExcel() {
-    try {
-        const wb = XLSX.utils.book_new();
-        let detalleVentas = [];
-        historialVisual.forEach(f => {
-            let tempDiv = document.createElement('div');
-            tempDiv.innerHTML = f.html;
-            tempDiv.querySelectorAll('.fila-p').forEach(fila => {
-                let celdas = fila.querySelectorAll('span');
-                if(celdas.length >= 6) {
-                    detalleVentas.push({
-                        "Factura": f.id, "Fecha": f.fecha, "Cliente": f.cliente,
-                        "Código": celdas[0].innerText, "Descripción": celdas[1].innerText,
-                        "Cajas": celdas[2].innerText, "Cant. Unid": celdas[3].innerText,
-                        "Precio Venta": celdas[4].innerText, "Total Fila": celdas[6].innerText,
-                        "Total Factura": f.total
-                    });
-                }
-            });
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalleVentas), "Ventas Detalladas");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cierresDia.map(c=>({Fecha:c.fechaCierre, Facts:c.cantidadFacturas, Total:c.totalAcumulado}))), "Cierres");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dbProductos), "DB-Inventario");
-        XLSX.writeFile(wb, "RESPALDO_TOTAL_LICOEXPRESS.xlsx");
-        localStorage.setItem('lico_ultima_exportacion', new Date().getTime());
-        document.getElementById('bloqueo-seguridad').style.display = 'none';
-    } catch (e) { alert("Error: " + e.message); }
-}
-
 function ejecutarCierreDia() {
-    if (historialVisual.length === 0) return alert("No hay facturas.");
+    if (historialVisual.length === 0) return alert("No hay facturas para cerrar.");
     if (confirm("¿Cerrar el día y limpiar historial?")) {
         let total = 0;
         historialVisual.forEach(f => total += parseFloat(f.total.replace('$ ','').replace(/\./g,'')) || 0);
