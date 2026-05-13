@@ -4,125 +4,148 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema LICOEXPRESS - Control Total</title>
-    <!-- Librería externa para manejo de Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Enlace a la hoja de estilos separada -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body onload="init()">
 
-    <!-- Bloqueo de Seguridad por Respaldo -->
     <div id="bloqueo-seguridad">
-        <h1 style="color: #ffc107;">⚠️ RESPALDO SEMANAL REQUERIDO ⚠️</h1>
-        <p style="font-size: 1.2em; max-width: 600px;">Para continuar facturando, debe descargar el archivo Excel con toda la información histórica.</p>
-        <button class="btn btn-respaldo" style="padding: 25px; width: 400px; font-size: 18px;" onclick="exportarTodoExcel()">📥 DESCARGAR TODA LA INFO Y DESBLOQUEAR</button>
+        <h1>SISTEMA BLOQUEADO</h1>
+        <p>Es necesario realizar el respaldo semanal para continuar.</p>
+        <button class="btn btn-respaldo" onclick="exportarTodoExcel()" style="width: 300px;">DESCARGAR RESPALDO COMPLETO</button>
     </div>
 
-    <div id="vista-factura" class="view active main-container">
-        <div class="factura-wrapper" id="area-captura">
-            <table class="tabla-factura">
-                <tr><td class="label-cell">FACTURA</td><td class="value-cell" colspan="6"><input type="text" id="n-factura" value="CLAH-001" style="text-align:center; font-weight:bold;"></td></tr>
-                <tr><td class="label-cell">FECHA</td><td class="value-cell" colspan="6"><input type="text" id="fecha-input" style="text-align:center;"></td></tr>
-                <tr><td class="label-cell">CLIENTE</td><td class="value-cell" colspan="6"><input type="text" id="cliente-input" placeholder="NOMBRE DEL CLIENTE" style="text-align:center; font-weight:bold;"></td></tr>
-            </table>
-            <table class="tabla-factura productos-table">
-                <thead>
-                    <tr><th>CODIGO</th><th>DESCRIPCION</th><th>CANT. CAJAS</th><th>CANT. UNIDAD</th><th>PRECIO VENTA</th><th>UNITARIO</th><th>TOTAL</th></tr>
-                </thead>
-                <tbody id="body-factura"></tbody>
-            </table>
-            
-            <!-- Sección de totales tipo Excel -->
-            <table class="seccion-totales">
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">SUBTOTAL</td>
-                    <td class="value-total" id="subtotal-factura">$ 0</td>
-                </tr>
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">VALOR FACTURA</td>
-                    <td class="value-total" id="total-factura">$ 0</td>
-                </tr>
-                <tr>
-                    <td style="border:none;"></td>
-                    <td class="label-total">NOTA</td>
-                    <td class="value-total" style="padding:0;">
-                        <input type="text" id="nota-credito" class="input-nota" value="-$ 0" oninput="recalcularConNota()">
-                    </td>
-                </tr>
-            </table>
+    <div class="main-container">
+        
+        <div id="vista-factura" class="view active">
+            <div class="factura-wrapper" id="area-captura">
+                <table class="tabla-factura">
+                    <tr>
+                        <td rowspan="3" colspan="2" style="text-align: center; border: 1px solid #000;">
+                            <h2 style="margin:0; color: #002060;">LICOEXPRESS</h2>
+                            <p style="font-size: 10px; margin:0;">REMISIÓN DE VENTA</p>
+                        </td>
+                        <td class="label-cell">FECHA</td>
+                        <td class="value-cell"><input type="text" id="fecha-input"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">FACTURA N°</td>
+                        <td class="value-cell"><input type="text" id="n-factura" value="CLAH-001"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">CLIENTE</td>
+                        <td class="value-cell"><input type="text" id="cliente-input" placeholder="Nombre del cliente"></td>
+                    </tr>
+                </table>
+
+                <table class="tabla-factura productos-table">
+                    <thead>
+                        <tr>
+                            <th>CÓDIGO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>CAJAS</th>
+                            <th>UDS</th>
+                            <th>PRECIO VENTA</th>
+                            <th>UNITARIO</th>
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-factura">
+                        </tbody>
+                </table>
+
+                <table class="seccion-totales">
+                    <tr>
+                        <td rowspan="3" style="width: 50%; vertical-align: top; padding: 5px;">
+                            <input type="text" id="nota-credito-obs" placeholder="Nota o concepto de descuento..." class="input-nota" style="text-align: left; color: #666;">
+                        </td>
+                        <td class="label-total">SUBTOTAL</td>
+                        <td class="value-total" id="subtotal-factura">$ 0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-total" style="background-color: #cc0000;">NOTA CRÉDITO</td>
+                        <td class="value-total"><input type="text" id="nota-credito" class="input-nota" value="-$ 0" oninput="recalcularConNota()"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-total">VALOR FACTURA</td>
+                        <td class="value-total" id="total-factura" style="font-size: 18px; color: #002060;">$ 0</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="sidebar">
+                <div class="logo-placeholder">
+                    LICO<br>EXPRESS
+                </div>
+                <div class="grupo-botones">
+                    <span class="titulo-grupo">Acciones Principales</span>
+                    <button class="btn btn-guardar" onclick="guardarFacturaVisual()">💾 GUARDAR FACTURA</button>
+                    <button class="btn btn-nuevo" onclick="nuevaFactura()">📄 NUEVA FACTURA</button>
+                </div>
+                <div class="grupo-botones">
+                    <span class="titulo-grupo">Gestión de Datos</span>
+                    <button class="btn btn-historial" onclick="cambiarVista('vista-historial')">📜 HISTORIAL</button>
+                    <button class="btn btn-db" onclick="cambiarVista('vista-db')">📦 INVENTARIO</button>
+                    <button class="btn btn-respaldo" onclick="exportarTodoExcel()">📥 EXPORTAR TODO</button>
+                    <button class="btn btn-nuevo" style="background: #666;" onclick="ejecutarCierreDia()">🏁 CIERRE DE DÍA</button>
+                </div>
+            </div>
         </div>
 
-        <div class="sidebar no-print">
-            <div class="logo-placeholder"><span>LICOEXPRESS</span></div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Facturación</div>
-                <button class="btn btn-guardar" onclick="guardarFacturaVisual()">GUARDAR FACTURA</button>
-                <button class="btn btn-nuevo" onclick="nuevaFactura()">NUEVA FACTURA</button>
+        <div id="vista-historial" class="view">
+            <div style="width:100%">
+                <button class="btn btn-nuevo" onclick="cambiarVista('vista-factura')" style="width:200px">⬅ VOLVER</button>
+                <button class="btn btn-db" onclick="cambiarVista('vista-lista-cierres')" style="width:200px">📂 VER CIERRES</button>
+                <table class="tabla-factura" style="margin-top:20px">
+                    <thead>
+                        <tr class="label-cell">
+                            <th>ID</th><th>FECHA</th><th>CLIENTE</th><th>TOTAL</th><th>VER</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-historial"></tbody>
+                </table>
             </div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Registros y Cierre</div>
-                <button class="btn btn-historial" onclick="cambiarVista('vista-historial')">HISTORIAL ACTUAL</button>
-                <button class="btn btn-db" style="background: #6c757d;" onclick="cambiarVista('vista-lista-cierres')">HISTORIAL CIERRES</button>
+        </div>
+
+        <div id="vista-db" class="view">
+            <div style="width:100%">
+                <button class="btn btn-nuevo" onclick="cambiarVista('vista-factura')" style="width:200px">⬅ VOLVER</button>
+                <input type="file" id="import-file" style="display:none">
+                <button class="btn btn-db" onclick="document.getElementById('import-file').click()" style="width:200px">📂 SUBIR EXCEL</button>
+                <table class="tabla-factura" style="margin-top:20px">
+                    <thead>
+                        <tr class="label-cell">
+                            <th>CÓDIGO</th><th>NOMBRE</th><th>UNIDAD/CAJA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-db"></tbody>
+                </table>
             </div>
-            <div class="grupo-botones">
-                <div class="titulo-grupo">Configuración</div>
-                <button class="btn btn-db" onclick="cambiarVista('vista-db')">BASE DE DATOS</button>
-                <button class="btn btn-respaldo" style="padding: 10px; font-size: 11px;" onclick="exportarTodoExcel()">📥 EXPORTAR TODO (EXCEL)</button>
+        </div>
+        
+        <div id="vista-lista-cierres" class="view">
+            <div style="width:100%">
+                <button class="btn btn-nuevo" onclick="cambiarVista('vista-historial')" style="width:200px">⬅ VOLVER</button>
+                <table class="tabla-factura" style="margin-top:20px">
+                    <thead>
+                        <tr class="label-cell">
+                            <th>FECHA CIERRE</th><th>FACTURAS</th><th>TOTAL</th><th>DETALLE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-cierres-body"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Modales y Vistas Secundarias -->
     <div id="modalFactura" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="cerrarModal()">&times;</span>
-            <div id="contenido-modal"></div>
-            <div style="margin-top:20px; text-align:center;" class="no-print">
-                <button class="btn btn-guardar" style="width:250px" onclick="window.print()">IMPRIMIR REMISIÓN (SIN PRECIOS)</button>
-            </div>
+        <span class="close-modal" onclick="cerrarModal()">&times;</span>
+        <div class="modal-content" id="contenido-modal"></div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn btn-guardar no-print" onclick="window.print()" style="width: 300px;">IMPRIMIR REMISIÓN</button>
         </div>
     </div>
 
-    <div id="vista-historial" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>📋 Historial de Facturas (Día Actual)</h2>
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>Nº</th><th>FECHA</th><th>CLIENTE</th><th>TOTAL</th><th>VER</th></tr></thead>
-                <tbody id="lista-historial"></tbody>
-            </table>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-nuevo" style="width: auto; padding: 12px 25px;" onclick="cambiarVista('vista-factura')">VOLVER</button>
-                <button class="btn" style="width: auto; padding: 12px 25px; background: #c0392b; color: white;" onclick="ejecutarCierreDia()">CIERRE DE DÍA</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="vista-lista-cierres" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>📅 Registro de Cierres de Día</h2>
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>FECHA CIERRE</th><th>FACTS</th><th>TOTAL ACUMULADO</th><th>ACCIONES</th></tr></thead>
-                <tbody id="tabla-cierres-body"></tbody>
-            </table>
-            <button class="btn btn-nuevo" style="margin-top:20px" onclick="cambiarVista('vista-factura')">VOLVER</button>
-        </div>
-    </div>
-
-    <div id="vista-db" class="view main-container">
-        <div style="flex-direction: column; width: 100%;">
-            <h2>⚙️ Base de Datos de Productos</h2>
-            <input type="file" id="import-file" accept=".xlsx, .xls">
-            <table class="tabla-factura productos-table">
-                <thead><tr><th>CODIGO</th><th>DESCRIPCION</th><th>UNIDADES/CAJA</th></tr></thead>
-                <tbody id="lista-db"></tbody>
-            </table>
-            <button class="btn btn-nuevo" style="margin-top:20px" onclick="cambiarVista('vista-factura')">VOLVER</button>
-        </div>
-    </div>
-
-    <!-- Enlace a la lógica de JavaScript separada -->
     <script src="script.js"></script>
 </body>
 </html>
