@@ -159,7 +159,7 @@
     </div>
 
     <script>
-        // BASE DE DATOS COMPLETA DESDE EL ARCHIVO
+        // BASE DE DATOS COMPLETA DESDE bd.xlsx
         const bdInicial = [
             {codigo:"50",nombre:"AGUA CRISTAL PET 600 ML",unidad:24},
             {codigo:"2",nombre:"TORTA COMBINADA CHOCOLATE/VAINILLA",unidad:1},
@@ -187,7 +187,7 @@
             {codigo:"325",nombre:"CLUB COLOMBIA DORADA LATA 330 ML",unidad:24},
             {codigo:"390",nombre:"CORONITA EXTRA BOTELLA NR 210 ML",unidad:24},
             {codigo:"443",nombre:"ENERGIZANTE RED BULL 250 ML",unidad:24},
-            {codigo:"447",nombre:"ENERGIZANTE RED BULL SIN AZUCAR 250 M",unidad:24},
+            {codigo:"447",nombre:"ENERGIZANTE RED BULL SIN AZUCAR  250 M",unidad:24},
             {codigo:"501",nombre:"GASEOSA COLOMBIANA 400 ML",unidad:15},
             {codigo:"514",nombre:"GASEOSA MANZANA 400 ML",unidad:15},
             {codigo:"526",nombre:"GASEOSA NARANJA 400 ML",unidad:15},
@@ -252,7 +252,7 @@
             {codigo:"841",nombre:"RON BACARDI MANDARINA 750 ML",unidad:12},
             {codigo:"849",nombre:"RON CACIQUE AÑEJO 750 ML",unidad:12},
             {codigo:"850",nombre:"RON CALDAS 15 AÑOS 750 ML",unidad:6},
-            {codigo:"852",nombre:"RON CALDAS 5 SECRETOS BOTELLA 750 ML",unidad:12},
+            {codigo:"852",nombre:"RON CALDAS 5 SECRETOS BOTELLA 750 ML",unidad:1},
             {codigo:"858",nombre:"RON CALDAS ESENCIAL 375 ML",unidad:24},
             {codigo:"859",nombre:"RON CALDAS ESENCIAL 750 ML",unidad:12},
             {codigo:"862",nombre:"RON CALDAS ROBLE BLANCO BOTELLA 750 ML",unidad:12},
@@ -272,7 +272,7 @@
             {codigo:"901",nombre:"RON MEDELLIN 8 AÑOS MEDIA 375 ML",unidad:30},
             {codigo:"902",nombre:"RON MEDELLIN DORADO BOTELLA 750 ML",unidad:12},
             {codigo:"903",nombre:"RON MEDELLIN DORADO MEDIA 375 ML",unidad:24},
-            {codigo:"904",nombre:"RON MEDELLIN GRAN RESERVA 12 AÑOS 750 ML",unidad:12},
+            {codigo:"904",nombre:"RON MEDELLIN GRAN RESERVA 12 AÑOS 750 ML",unidad:1},
             {codigo:"970",nombre:"TEQUILA HERRADURA ORIGINAL REP. 750 ML",unidad:6},
             {codigo:"971",nombre:"TEQUILA HERRADURA ORIGINAL AÑEJO 750 ML",unidad:12},
             {codigo:"994",nombre:"TEQUILA 1800 AÑEJO 750 ML",unidad:12},
@@ -301,7 +301,7 @@
             {codigo:"1042",nombre:"TEQUILA OLMECA BLANCO 700 ML",unidad:1},
             {codigo:"1044",nombre:"TEQUILA OLMECA REPOSADO 350ML",unidad:1},
             {codigo:"1046",nombre:"TEQUILA PATRON AÑEJO 700 ML",unidad:1},
-            {codigo:"1049",nombre:"TEQUILA PATRON REPOSADO 700 - 750 ML",unidad:1},
+            {codigo:"1049",nombre:"TEQUILA PATRON REPOSADO 700 - 750  ML",unidad:1},
             {codigo:"1050",nombre:"TEQUILA PATRON SILVER 700 - 750 ML",unidad:1},
             {codigo:"1189",nombre:"VINO GATO NEGRO CABER SAUV 750 ML",unidad:1},
             {codigo:"1194",nombre:"VINO GATO NEGRO MERLOT 750 ML",unidad:1},
@@ -349,7 +349,8 @@
             {codigo:"1541",nombre:"VINO ESTORIL 750 ML",unidad:1},
             {codigo:"1542",nombre:"WHISKY SCOTTISH FOX 700 ML",unidad:1},
             {codigo:"257",nombre:"CHOCLITOS LIMÓN 210 GRS",unidad:1},
-            {codigo:"1779",nombre:"ENERGIZANTE RED BULL TROPICAL 250 ML",unidad:24},
+            {codigo:"1779",nombre:"ENERGIZANTE RED BULL TROPICAL  250 ML",unidad:24},
+            {codigo:"1510",nombre:"ITEM 102030 - HEINEKEN LATA 310 ml",unidad:24},
             {codigo:"563",nombre:"GATORADE TROPICAL X 1000 ML",unidad:12},
             {codigo:"548",nombre:"GASEOSA UVA 2,5 LT",unidad:8},
             {codigo:"68",nombre:"AGUARDIENTE AMARILLO MANZANARES X 750",unidad:12},
@@ -393,11 +394,11 @@
         }
 
         function aniadirItemManual() {
-            const cod = prompt("Ingrese el Código del producto:");
+            const cod = prompt("Ingrese el Código:");
             if (!cod) return;
-            const nom = prompt("Ingrese la Descripción/Nombre:");
+            const nom = prompt("Ingrese la Descripción:");
             if (!nom) return;
-            const uni = prompt("Ingrese Unidades por Caja:", "1");
+            const uni = prompt("Unidades por Caja:", "1");
             if (!uni) return;
 
             dbProductos.push({
@@ -408,7 +409,7 @@
 
             localStorage.setItem('lico_db', JSON.stringify(dbProductos));
             renderizarDB();
-            alert("Producto añadido.");
+            alert("Ítem añadido exitosamente.");
         }
 
         function renderizarFilas() {
@@ -508,7 +509,7 @@
                 html: clon.innerHTML
             });
             localStorage.setItem('lico_historial_visual', JSON.stringify(historialVisual));
-            alert("Guardado");
+            alert("Factura guardada");
         }
 
         function exportarTodoExcel() {
